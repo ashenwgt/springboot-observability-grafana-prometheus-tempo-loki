@@ -61,9 +61,11 @@ build/
 
 ### MySQL Host Data ###
 my-sql-data
+mysql-data
 mongo-data
 /mysql_keycloak_data/
 /postgres/
 /postgres-inventory/
 /postgres-order/
 /grafana/
+docker/tempo/tempo-data/
