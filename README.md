@@ -6,7 +6,11 @@ This demo project includes 2 **springboot** microservices: `loan-service` and `f
 
 When a loan creation request is received from a customer, `loan-service` will make a call to `fraud-detection-service` and verify that this customer is not included in a known fraud lists maintained in a **MySQL** database.
 
+![springboot-observability-1.png](docs/diagrams/springboot-observability-1.png)
+
 Observability tools like **Grafana**, **Prometheus**, **Tempo**,  **Loki**, and **Micrometer** are used for instrumentation and telemetry purposes.
+
+![springboot-observability-2.png](docs/diagrams/springboot-observability-2.png)
 
 ## Terminology
 
@@ -25,30 +29,33 @@ Observability tools like **Grafana**, **Prometheus**, **Tempo**,  **Loki**, and 
 
 ## Tech Stack
 
-- Java 21
+- **Java** 21
 - **Springboot** 3.2.4: Java web application framework.
 - **Maven** 3.9.6: Java dependency manager and build tool.
 - **Lombok**: Java annotation library to reduce boilerplate code.
 - **spring-boot-starter-aop**: Maven dependency to enable Aspect Oriented Programming (AOP). 
 
+- **Grafana**: Tool to visualize and monitor metrics, logs, traces etc. This brings all services like Tempo, Loki, and Prometheus together to visualize their  information. The `docker/grafana/datasource.yml` file defines data sources from which Grafana needs to gather data to visualize.
+
 ###### Logging
 - **Logback**: Java logging library.
-- **Loki**: Tool to aggregate and index logs to be visualized using Grafana.
-- **loki-logback-appender**: Logback log appender for Loki. `resources/logback-spring.xml` file includes how the Logback appender should structure logs and where to send them (i.e. Loki URL).
+- **loki-logback-appender**: Logback log appender for Grafana Loki. `resources/logback-spring.xml` file includes how the Logback appender should structure logs and where to send them (i.e. Loki URL).
 - **RestTemplate Spring Bean**: Provides a high-level API over HTTP client libraries. It can implement efficient request/response logging capability with metrics and traces, which can be used to debug exchange between two servers. e.g. As we are using a RestTemplate to call origin service from destination service, the traceId and spanId are generated and propagated automatically.
-
-###### Metrics
-- **spring-boot-starter-actuator**: Maven dependency to collect metrics of our application such as JVM statistics, Thread Count, Heap Memory information, etc. Metrics supported by Springboot Actuator can be found here: https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html#actuator.metrics.supported. 
-- **Micrometer**: vendor-neutral API for instrumenting code, also collecting, preparing, and sending metrics to metric aggregators like Prometheus.
-- **micrometer-registry-prometheus**: Maven dependency to enable Micrometer (e.g. at runtime) and expose an endpoint that can be scraped by metric aggregators like Prometheus.
-- **Prometheus**: Tool to aggregate metrics. It expects a configurations file that specifies where to scrape metrics etc.: `docker/prometheus/prometheus.yml`
-- **Grafana**: Tool to visualize and monitor metrics. This brings all services like Tempo, Loki, and Prometheus together to visualize their  information. The `docker/grafana/datasource.yml` file defines data sources from which Grafana needs to gather data to visualize.
+- **[Grafana Loki](https://grafana.com/oss/loki/)**: Tool to aggregate and index logs to be visualized using Grafana.
 
 ###### Tracing
-- **micrometer-tracing-bridge-brave**: Maven dependency to add distributed tracing capabilities for application using Micrometer. Not only Brave, but also other tracing implementations like OpenTelemetry can be used here (e.g. **micrometer-tracing-bridge-otel**).
+- **Micrometer**: Code instrumentation tool with a vendor-neutral tracing facade (a.k.a. tracing bridge) support for collecting, preparing, and sending metrics and traces to aggregators like Prometheus. Available tracing bridge implementations include **micrometer-tracing-bridge-brave** for Brave and **micrometer-tracing-bridge-otel** for OpenTelemetry formats.
+- **micrometer-tracing-bridge-brave**: Maven dependency to add distributed tracing capabilities for application using Micrometer. 
 - **datasource-micrometer-spring-boot**: Maven dependency to use Micrometer and trace calls to the database from Spring Data JDBC.
 - **zipkin-reporter-brave**: Maven dependency to export tracing information to Tempo.
-- **Tempo**: Tool for distributed tracing (i.e. tracking requests that span across different components). Tempo configurations can be specified in `docker/tempo/tempo.yml` file.
+- **[Brave](https://github.com/openzipkin/brave)** — Distributed tracing instrumentation library supporting both W3C & B3 trace context and propagation formats and main compatible with Zipkin backend services (also supporting [Amazon X-Ray](https://github.com/openzipkin/zipkin-aws/tree/master/storage/xray-udp) and other services using third-party plugins).
+- **[Zipkin](https://github.com/openzipkin/zipkin)** — Distributed tracing tool for visualizing, monitoring, and troubleshooting distributed traces in service architectures.
+- **[Grafana Tempo](https://grafana.com/oss/tempo/)**: Distributed tracing backend, deeply integrated with Grafana, Prometheus, and Loki. Tempo can ingest common open source tracing protocols, including Jaeger, Zipkin, and OpenTelemetry. Tempo configurations can be specified in `docker/tempo/tempo.yml` file.
+
+###### Metrics
+- **spring-boot-starter-actuator**: Maven dependency to collect metrics of our application such as JVM statistics, Thread Count, Heap Memory information, etc. Metrics supported by Springboot Actuator can be found here: https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html#actuator.metrics.supported.
+- **micrometer-registry-prometheus**: Maven dependency to enable Micrometer (e.g. at runtime) and expose an endpoint that can be scraped by metric aggregators like Prometheus.
+- **Prometheus**: Tool to aggregate metrics. It expects a configurations file that specifies where to scrape metrics etc.: `docker/prometheus/prometheus.yml`
 
 ###### Database
 - **MySQL**: Relational database.
@@ -146,22 +153,22 @@ curl --location 'http://localhost:8080/loan' \
 }'
 ```
 
-![img.png](docs/images/postman.png)
+![img.png](docs/screenshots/postman.png)
 
 Navigate to Grafana dashboard via `http://localhost:3000` and select `Explore` from the left sidebar. Under the dropdown, select `Loki` and run a sample query (e.g. `application label` -> `loan-service`).
 
-![img.png](docs/images/grafana-loki-1.png)
+![img.png](docs/screenshots/grafana-loki-1.png)
 
 Switch to `Prometheus` and run the same query.
 
-![img.png](docs/images/grafana-prometheus-1.png)
+![img.png](docs/screenshots/grafana-prometheus-1.png)
 
 Go back to `Loki` and expand a log line to find its `TraceID`. Click on the `Tempo` button next it to open up a `Tempo` view from right side. Inspect how to loan-service has made a call to fraud-detection service and how that trace is tracked using `TraceID`.
 
-![img.png](docs/images/grafana-tempo-1.png)
+![img.png](docs/screenshots/grafana-tempo-1.png)
 
 Expand the trace in `Tempo` to inspect how loan service calls fraud-detection service, how the fraud-detection service queries MySQL database for already-known fraud users, how loan service saves the loan details to MySQL database etc.
 
-![img.png](docs/images/grafana-tempo-2.png)
+![img.png](docs/screenshots/grafana-tempo-2.png)
 
 Feel free to switch to different tab views and experiment with different queries.
