@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Repository layer for performing CRUD operations on loans.
+ */
 @Repository
 @RequiredArgsConstructor
 @Observed
@@ -19,16 +22,28 @@ public class LoanRepository {
 
     private final JdbcClient jdbcClient;
 
+    /**
+     * Retrieves all loans from the database.
+     *
+     * @return List of Loan entities
+     */
     @Transactional(readOnly = true)
     public List<Loan> findAll() {
-        var findQuery = "SELECT id, loanId, customerName, customerId, amount, loanStatus FROM loans";
+        String findQuery = "SELECT id, loanId, customerName, customerId, amount, loanStatus FROM loans";
         return jdbcClient.sql(findQuery).query(Loan.class).list();
     }
 
+    /**
+     * Saves a new loan to the database and returns the generated ID.
+     *
+     * @param loan Loan entity to be saved
+     * @return Generated loan ID
+     */
     @Transactional
     public Long save(Loan loan) {
-        var insertQuery = "INSERT INTO loans(loanId, customerName, customerId, amount, loanStatus) VALUES(?, ?, ?, ?, ?)";
+        String insertQuery = "INSERT INTO loans(loanId, customerName, customerId, amount, loanStatus) VALUES(?, ?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
+
         jdbcClient.sql(insertQuery)
                 .param(1, UUID.randomUUID().toString())
                 .param(2, loan.getCustomerName())
@@ -36,6 +51,7 @@ public class LoanRepository {
                 .param(4, loan.getAmount())
                 .param(5, loan.getLoanStatus().toString())
                 .update();
+
         return keyHolder.getKeyAs(Long.class);
     }
 }
